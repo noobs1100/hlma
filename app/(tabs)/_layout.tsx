@@ -1,14 +1,24 @@
-import { Link, Tabs } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
-import React from 'react';
-import { Pressable } from 'react-native';
+import { Link, Redirect, Tabs } from "expo-router";
+import { SymbolView } from "expo-symbols";
+import React from "react";
+import { Pressable } from "react-native";
 
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors from '@/constants/Colors';
+import { useClientOnlyValue } from "@/components/useClientOnlyValue";
+import { useColorScheme } from "@/components/useColorScheme";
+import Colors from "@/constants/Colors";
+import { useAuth } from "@/providers/auth-provider";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? "light";
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect href="/sign-in" />;
+  }
 
   return (
     <Tabs
@@ -17,20 +27,17 @@ export default function TabLayout() {
         // Disable the static render of the header on web
         // to prevent a hydration error in React Navigation v6.
         headerShown: useClientOnlyValue(false, true),
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Search Books',
+          title: "Search Books",
           tabBarIcon: ({ color }) => (
-            <SymbolView
-              name="magnifyingglass"
-              tintColor={color}
-              size={28}
-            />
+            <SymbolView name="magnifyingglass" tintColor={color} size={28} />
           ),
           headerRight: () => (
-            <Link href="/modal" asChild>
+            <Link href="/modalForSelection" asChild>
               <Pressable style={{ marginRight: 15 }}>
                 {({ pressed }) => (
                   <SymbolView
@@ -48,26 +55,18 @@ export default function TabLayout() {
       <Tabs.Screen
         name="two"
         options={{
-          title: 'Scan QR',
+          title: "Scan QR",
           tabBarIcon: ({ color }) => (
-            <SymbolView
-              name="qrcode.viewfinder"
-              tintColor={color}
-              size={28}
-            />
+            <SymbolView name="qrcode.viewfinder" tintColor={color} size={28} />
           ),
         }}
       />
       <Tabs.Screen
         name="three"
         options={{
-          title: 'Profile',
+          title: "Profile",
           tabBarIcon: ({ color }) => (
-            <SymbolView
-              name="person.crop.circle"
-              tintColor={color}
-              size={28}
-            />
+            <SymbolView name="person.crop.circle" tintColor={color} size={28} />
           ),
         }}
       />

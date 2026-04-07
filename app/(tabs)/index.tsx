@@ -1,18 +1,18 @@
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors from '@/constants/Colors';
-import { Keyboard, Pressable, StyleSheet } from 'react-native';
-
-
-import Search from '@/components/Search';
-import { View } from '@/components/Themed';
+import Search from "@/components/Search";
+import { useColorScheme } from "@/components/useColorScheme";
+import Colors from "@/constants/Colors";
+import { Keyboard, Pressable, StyleSheet } from "react-native";
 
 export default function TabOneScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? "light";
+  const colors = Colors[colorScheme];
 
   return (
-  
-    <Pressable style={styles.container} onPress={() => Keyboard.dismiss()}>
-      <Search/>
+    <Pressable
+      style={[styles.container, { backgroundColor: colors.background }]}
+      onPress={() => Keyboard.dismiss()}
+    >
+      <Search />
     </Pressable>
   );
 }
@@ -20,14 +20,5 @@ export default function TabOneScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
   },
 });
