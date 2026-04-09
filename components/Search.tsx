@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { Searchbar } from "react-native-paper";
+import { useFocusEffect } from "@react-navigation/native";
 import { useColorScheme } from "./useColorScheme";
 
 const apiUrl = getApiBaseUrl();
@@ -32,6 +33,7 @@ const Search = () => {
   const [error, setError] = React.useState<string | null>(null);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const skipNextDebounceRef = React.useRef(false);
 
   const loadBooks = React.useCallback(
     async (query: string, signal?: AbortSignal) => {
@@ -89,7 +91,19 @@ const Search = () => {
     [],
   );
 
+  useFocusEffect(
+    React.useCallback(() => {
+      skipNextDebounceRef.current = true;
+      void loadBooks(searchQuery);
+    }, [loadBooks, searchQuery]),
+  );
+
   React.useEffect(() => {
+    if (skipNextDebounceRef.current) {
+      skipNextDebounceRef.current = false;
+      return;
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       void loadBooks(searchQuery, controller.signal);

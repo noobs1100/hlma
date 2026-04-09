@@ -2,6 +2,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,7 @@ import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { getApiBaseUrl } from "@/lib/api-url";
+import { useAuth } from "@/providers/auth-provider";
 
 const apiUrl = getApiBaseUrl();
 
@@ -27,6 +29,7 @@ type Rack = {
 };
 
 export default function RacksScreen() {
+  const { user } = useAuth();
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
   const params = useLocalSearchParams<{ selectedRackId?: string }>();
@@ -44,6 +47,7 @@ export default function RacksScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingRackId, setDeletingRackId] = useState<string | null>(null);
 
   const selectedRack = useMemo(
     () => racks.find((rack) => rack.rackId === selectedRackId) ?? null,
@@ -111,6 +115,67 @@ export default function RacksScreen() {
       setSelectedRackId(selectedRackIdFromParams);
     }
   }, [selectedRackIdFromParams]);
+
+  const handleDeleteRack = useCallback(async () => {
+    if (!selectedRack) {
+      return;
+    }
+
+    setDeletingRackId(selectedRack.rackId);
+
+    try {
+      const response = await fetch(
+        `${apiUrl}/api/racks/${selectedRack.rackId}`,
+        getAuthenticatedRequestInit({ method: "DELETE" }),
+      );
+
+      if (!response.ok) {
+        let message = "Could not delete the rack.";
+
+        try {
+          const payload = (await response.json()) as { message?: string };
+          if (payload?.message) {
+            message = payload.message;
+          }
+        } catch {
+          // Keep the default error message.
+        }
+
+        throw new Error(message);
+      }
+
+      Alert.alert("Deleted", "The rack was deleted successfully.");
+      await loadRacks();
+    } catch (deleteError) {
+      Alert.alert(
+        "Delete failed",
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Something went wrong.",
+      );
+    } finally {
+      setDeletingRackId(null);
+    }
+  }, [loadRacks, selectedRack]);
+
+  const confirmDeleteRack = useCallback(() => {
+    if (!selectedRack) {
+      return;
+    }
+
+    Alert.alert(
+      "Delete rack",
+      "This will delete the rack only if no copies are assigned to it.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => void handleDeleteRack(),
+        },
+      ],
+    );
+  }, [handleDeleteRack, selectedRack]);
 
   return (
     <ScrollView
@@ -243,6 +308,32 @@ export default function RacksScreen() {
                   {selectedRack.description?.trim() ||
                     "No description provided."}
                 </Text>
+
+                {user?.role === "admin" ? (
+                  <Pressable
+                    disabled={deletingRackId === selectedRack.rackId}
+                    onPress={confirmDeleteRack}
+                    style={({ pressed }) => [
+                      styles.deleteButton,
+                      {
+                        backgroundColor: colors.inputBackground,
+                        borderColor: "#dc2626",
+                        opacity:
+                          pressed || deletingRackId === selectedRack.rackId
+                            ? 0.85
+                            : 1,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.deleteButtonText, { color: "#dc2626" }]}
+                    >
+                      {deletingRackId === selectedRack.rackId
+                        ? "Deleting…"
+                        : "Delete Rack"}
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             ) : (
               <Text style={{ color: colors.muted }}>
@@ -329,5 +420,16 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 15,
     fontWeight: "500",
+  },
+  deleteButton: {
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  deleteButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
   },
 });

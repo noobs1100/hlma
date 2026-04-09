@@ -61,8 +61,15 @@ function RootLayoutNav() {
             name="(add stuff)/rack-picker"
             options={{ presentation: "modal", title: "Select Rack" }}
           />
+          <Stack.Screen
+            name="copies/[copyId]"
+            options={{ title: "Copy Info" }}
+          />
           <Stack.Screen name="racks" options={{ title: "Racks" }} />
-          <Stack.Screen name="books" options={{ title: "Info", headerBackTitle: "Search"}}/>
+          <Stack.Screen
+            name="books"
+            options={{ title: "Info", headerBackTitle: "Search" }}
+          />
         </Stack>
       </AuthProvider>
     </ThemeProvider>

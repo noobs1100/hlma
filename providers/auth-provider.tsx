@@ -11,7 +11,7 @@ import { AppState } from "react-native";
 
 type AuthContextValue = {
   session: AuthSession | null;
-  user: AuthSession["user"] | null;
+  user: (AuthSession["user"] & { role?: string }) | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   error: string | null;

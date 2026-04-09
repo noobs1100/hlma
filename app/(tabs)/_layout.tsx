@@ -10,7 +10,8 @@ import { useAuth } from "@/providers/auth-provider";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme() ?? "light";
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   if (isLoading) {
     return null;
@@ -36,20 +37,22 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <SymbolView name="magnifyingglass" tintColor={color} size={28} />
           ),
-          headerRight: () => (
-            <Link href="/modalForSelection" asChild>
-              <Pressable style={{ marginRight: 15 }}>
-                {({ pressed }) => (
-                  <SymbolView
-                    name="plus.circle"
-                    size={25}
-                    tintColor={Colors[colorScheme].text}
-                    style={{ opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
+          headerRight: isAdmin
+            ? () => (
+                <Link href="/modalForSelection" asChild>
+                  <Pressable style={{ marginRight: 15 }}>
+                    {({ pressed }) => (
+                      <SymbolView
+                        name="plus.circle"
+                        size={25}
+                        tintColor={Colors[colorScheme].text}
+                        style={{ opacity: pressed ? 0.5 : 1 }}
+                      />
+                    )}
+                  </Pressable>
+                </Link>
+              )
+            : undefined,
         }}
       />
       <Tabs.Screen
