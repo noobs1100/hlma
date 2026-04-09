@@ -3,10 +3,7 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
-import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/components/useColorScheme";
@@ -22,28 +19,8 @@ export const unstable_settings = {
   initialRouteName: "index",
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
-  });
-
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
 
   return <RootLayoutNav />;
 }
@@ -62,12 +39,30 @@ function RootLayoutNav() {
           <Stack.Screen name="modal" options={{ presentation: "modal" }} />
           <Stack.Screen
             name="modalForSelection"
-            options={{ presentation: "modal", title: "Click on Any One " }}
+            options={{ title: "Click on Any One " }}
           />
           <Stack.Screen
             name="(add stuff)/scanner"
             options={{ presentation: "modal", title: "Scan Rack Code" }}
           />
+          <Stack.Screen
+            name="(add stuff)/book"
+            options={{ presentation: "modal", title: "Add New Book" }}
+          />
+          <Stack.Screen
+            name="(add stuff)/copy"
+            options={{ title: "Add New Copy" }}
+          />
+          <Stack.Screen
+            name="(add stuff)/book-picker"
+            options={{ presentation: "modal", title: "Select Book" }}
+          />
+          <Stack.Screen
+            name="(add stuff)/rack-picker"
+            options={{ presentation: "modal", title: "Select Rack" }}
+          />
+          <Stack.Screen name="racks" options={{ title: "Racks" }} />
+          <Stack.Screen name="books" options={{ title: "Info", headerBackTitle: "Search"}}/>
         </Stack>
       </AuthProvider>
     </ThemeProvider>

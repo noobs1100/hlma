@@ -19,8 +19,19 @@ const modalForSelection = () => {
         buttonColor={colors.tint}
         textColor={colors.background}
         style={styles.button}
+        onPress={() => router.push("/(add stuff)/book")}
       >
         Add New BOOK
+      </Button>
+
+      <Button
+        mode="contained"
+        buttonColor={colors.tint}
+        textColor={colors.background}
+        style={styles.button}
+        onPress={() => router.push("/(add stuff)/copy")}
+      >
+        Add New Copy
       </Button>
 
       <Button
