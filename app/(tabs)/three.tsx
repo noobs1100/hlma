@@ -10,6 +10,7 @@ import { useAuth } from "@/providers/auth-provider";
 export default function TabThreeScreen() {
   const colorScheme = useColorScheme() ?? "light";
   const { user, logout, isLoading } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -46,6 +47,13 @@ export default function TabThreeScreen() {
         onPress={() => router.push("/racks")}
         style={styles.button}
       />
+      {isAdmin ? (
+        <CustomButton
+          label="Admin Menu"
+          onPress={() => router.push("/admin")}
+          style={styles.button}
+        />
+      ) : null}
       <CustomButton
         label="Logout"
         onPress={handleLogout}
@@ -70,7 +78,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   button: {
-    width: 100,
+    width: "100%",
     height: 50,
   },
 });

@@ -66,6 +66,7 @@ function RootLayoutNav() {
             options={{ title: "Copy Info" }}
           />
           <Stack.Screen name="racks" options={{ title: "Racks" }} />
+          <Stack.Screen name="admin" options={{ title: "Admin" }} />
           <Stack.Screen
             name="books"
             options={{ title: "Info", headerBackTitle: "Search" }}
