@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -12,6 +12,7 @@ import {
 
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import { useCopyStore } from "@/lib/add-copy-store";
 import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { getApiBaseUrl } from "@/lib/api-url";
 
@@ -29,23 +30,12 @@ type Book = {
 export default function BookPickerScreen() {
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
-  const params = useLocalSearchParams<{
-    returnTo?: string;
-    selectedCopyId?: string;
-    selectedRackId?: string;
-    isbn?: string;
-  }>();
-  const returnTo = typeof params.returnTo === "string" ? params.returnTo : null;
-  const selectedCopyId =
-    typeof params.selectedCopyId === "string" ? params.selectedCopyId : null;
-  const selectedRackId =
-    typeof params.selectedRackId === "string" ? params.selectedRackId : null;
-  const isbn = typeof params.isbn === "string" ? params.isbn : null;
   const [books, setBooks] = useState<Book[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const setSelectedBook = useCopyStore((state) => state.setSelectedBook);
 
   const filteredBooks = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -114,19 +104,7 @@ export default function BookPickerScreen() {
   }, [loadBooks]);
 
   const handleSelectBook = (book: Book) => {
-    if (returnTo) {
-      router.replace({
-        pathname: returnTo as never,
-        params: {
-          selectedBookId: book.bookId,
-          selectedCopyId: selectedCopyId ?? "",
-          selectedRackId: selectedRackId ?? "",
-          isbn: isbn ?? "",
-        },
-      } as never);
-      return;
-    }
-
+    setSelectedBook(book);
     router.back();
   };
 

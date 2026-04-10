@@ -21,25 +21,10 @@ import Colors from "@/constants/Colors";
 import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { getApiBaseUrl } from "@/lib/api-url";
 import { parseAddStuffCode } from "@/lib/addStuffScanner";
+import { useCopyStore } from "../../lib/add-copy-store";
+import type { CopyBook, CopyRack } from "../../lib/add-copy-store";
 
 const apiUrl = getApiBaseUrl();
-
-type Book = {
-  bookId: string;
-  title: string;
-  author: string;
-  genre: string;
-  isbn: string;
-  description: string;
-};
-
-type Rack = {
-  rackId: string;
-  room: string;
-  cupboard: string;
-  rack: string;
-  description: string | null;
-};
 
 type CreateCopyResponse = {
   copyId: string;
@@ -58,10 +43,17 @@ export default function AddCopyScreen() {
     selectedCopyId?: string;
     isbn?: string;
   }>();
-  const [copyId, setCopyId] = useState("");
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  const [selectedRack, setSelectedRack] = useState<Rack | null>(null);
-  const [pendingRackId, setPendingRackId] = useState<string | null>(null);
+  const copyId = useCopyStore((state) => state.copyId);
+  const selectedBook = useCopyStore((state) => state.selectedBook);
+  const selectedRack = useCopyStore((state) => state.selectedRack);
+  const pendingRackId = useCopyStore((state) => state.pendingRackId);
+  const initialIsbn = useCopyStore((state) => state.initialIsbn);
+  const setCopyId = useCopyStore((state) => state.setCopyId);
+  const setSelectedBook = useCopyStore((state) => state.setSelectedBook);
+  const setSelectedRack = useCopyStore((state) => state.setSelectedRack);
+  const setPendingRackId = useCopyStore((state) => state.setPendingRackId);
+  const setInitialIsbn = useCopyStore((state) => state.setInitialIsbn);
+  const resetCopyStore = useCopyStore((state) => state.reset);
   const [copyScannerVisible, setCopyScannerVisible] = useState(false);
   const [isbnScannerVisible, setIsbnScannerVisible] = useState(false);
   const [rackScannerVisible, setRackScannerVisible] = useState(false);
@@ -75,7 +67,7 @@ export default function AddCopyScreen() {
     typeof params.selectedRackId === "string" ? params.selectedRackId : null;
   const selectedCopyId =
     typeof params.selectedCopyId === "string" ? params.selectedCopyId : null;
-  const initialIsbn = typeof params.isbn === "string" ? params.isbn : null;
+  const initialIsbnParam = typeof params.isbn === "string" ? params.isbn : null;
 
   useEffect(() => {
     if (selectedCopyId) {
@@ -84,10 +76,10 @@ export default function AddCopyScreen() {
   }, [selectedCopyId]);
 
   useEffect(() => {
-    if (initialIsbn && !copyId) {
-      // Keep the ISBN handy if the user comes back from book creation.
+    if (initialIsbnParam && !initialIsbn) {
+      setInitialIsbn(initialIsbnParam);
     }
-  }, [copyId, initialIsbn]);
+  }, [initialIsbn, initialIsbnParam, setInitialIsbn]);
 
   useEffect(() => {
     if (!selectedBookId) {
@@ -106,7 +98,7 @@ export default function AddCopyScreen() {
           throw new Error("Could not load the selected book.");
         }
 
-        return (await response.json()) as Book;
+        return (await response.json()) as CopyBook;
       })
       .then((book) => {
         if (isActive) {
@@ -146,7 +138,7 @@ export default function AddCopyScreen() {
           throw new Error("Could not load the selected rack.");
         }
 
-        return (await response.json()) as Rack;
+        return (await response.json()) as CopyRack;
       })
       .then((rack) => {
         if (isActive) {
@@ -191,11 +183,27 @@ export default function AddCopyScreen() {
     return null;
   }, [copyId, selectedBook, selectedRack]);
 
+  const showInvalidCodeAlert = (
+    closeScanner: () => void,
+    title: string,
+    message: string,
+  ) => {
+    closeScanner();
+
+    setTimeout(() => {
+      Alert.alert(title, message, [{ text: "OK" }]);
+    }, 0);
+  };
+
   const handleCopyScan = (rawCode: string) => {
     const parsed = parseAddStuffCode(rawCode);
 
     if (!parsed || parsed.kind !== "b") {
-      Alert.alert("Invalid code", "Scan a copy code in the format b:AAAAAA.");
+      showInvalidCodeAlert(
+        () => setCopyScannerVisible(false),
+        "Invalid code",
+        "Scan a copy code in the format b:AAAAAA.",
+      );
       return;
     }
 
@@ -206,6 +214,7 @@ export default function AddCopyScreen() {
   const handleIsbnScan = async (isbn: string) => {
     setIsbnScannerVisible(false);
     setLoadingBook(true);
+    setInitialIsbn(isbn);
 
     try {
       const response = await fetch(
@@ -217,7 +226,7 @@ export default function AddCopyScreen() {
         throw new Error("Could not search for the book.");
       }
 
-      const payload = (await response.json()) as Book[];
+      const payload = (await response.json()) as CopyBook[];
       const exactMatch = payload.find((book) => book.isbn === isbn);
 
       if (exactMatch) {
@@ -247,7 +256,11 @@ export default function AddCopyScreen() {
     const parsed = parseAddStuffCode(rawCode);
 
     if (!parsed || parsed.kind !== "r") {
-      Alert.alert("Invalid code", "Scan a rack code in the format r:AAAAAA.");
+      showInvalidCodeAlert(
+        () => setRackScannerVisible(false),
+        "Invalid code",
+        "Scan a rack code in the format r:AAAAAA.",
+      );
       return;
     }
 
@@ -278,7 +291,7 @@ export default function AddCopyScreen() {
         throw new Error("Could not load the rack.");
       }
 
-      const rack = (await response.json()) as Rack;
+      const rack = (await response.json()) as CopyRack;
       setSelectedRack(rack);
       setPendingRackId(null);
     } catch (error) {
@@ -333,9 +346,7 @@ export default function AddCopyScreen() {
       }
 
       const created = (await response.json()) as CreateCopyResponse;
-      setCopyId("");
-      setSelectedBook(null);
-      setSelectedRack(null);
+      resetCopyStore();
 
       Alert.alert("Success", "Copy created successfully.", [
         {
@@ -498,13 +509,6 @@ export default function AddCopyScreen() {
                 onPress={() =>
                   router.push({
                     pathname: "/(add stuff)/book-picker",
-                    params: {
-                      returnTo: "/(add stuff)/copy",
-                      selectedCopyId: copyId,
-                      selectedRackId:
-                        selectedRack?.rackId ?? selectedRackId ?? "",
-                      isbn: initialIsbn ?? "",
-                    },
                   })
                 }
                 style={({ pressed }) => [
@@ -626,13 +630,6 @@ export default function AddCopyScreen() {
                 onPress={() =>
                   router.push({
                     pathname: "/(add stuff)/rack-picker",
-                    params: {
-                      returnTo: "/(add stuff)/copy",
-                      selectedCopyId: copyId,
-                      selectedBookId:
-                        selectedBook?.bookId ?? selectedBookId ?? "",
-                      isbn: initialIsbn ?? "",
-                    },
                   })
                 }
                 style={({ pressed }) => [

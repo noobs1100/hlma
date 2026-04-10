@@ -29,6 +29,7 @@ export default function AddStuffScannerModal({
   const [lastResult, setLastResult] = useState<AddStuffScanResult | null>(null);
   const lastScanAtRef = useRef(0);
   const lastHandledCodeRef = useRef<string | null>(null);
+  const alertVisibleRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -48,7 +49,27 @@ export default function AddStuffScannerModal({
     [kind],
   );
 
+  const showInvalidCodeAlert = (title: string, message: string) => {
+    alertVisibleRef.current = true;
+    setCameraActive(false);
+
+    Alert.alert(title, message, [
+      {
+        text: "OK",
+        onPress: () => {
+          lastHandledCodeRef.current = null;
+          alertVisibleRef.current = false;
+          setCameraActive(true);
+        },
+      },
+    ]);
+  };
+
   const handleBarcodeScanned = ({ data }: { data: string }) => {
+    if (alertVisibleRef.current || !cameraActive) {
+      return;
+    }
+
     const now = Date.now();
 
     if (now - lastScanAtRef.current < 500) {
@@ -67,13 +88,16 @@ export default function AddStuffScannerModal({
 
     if (!parsed) {
       setLastResult(null);
-      Alert.alert("Invalid code", "Expected format: r:AAAAAA or b:AAAAAA");
+      showInvalidCodeAlert(
+        "Invalid code",
+        "Expected format: r:AAAAAA or b:AAAAAA",
+      );
       return;
     }
 
     if (parsed.kind !== kind) {
       setLastResult(null);
-      Alert.alert(
+      showInvalidCodeAlert(
         "Wrong code type",
         `This screen expects a ${kind === "r" ? "rack" : "book"} code.`,
       );

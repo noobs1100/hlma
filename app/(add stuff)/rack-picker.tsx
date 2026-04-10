@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -12,6 +12,7 @@ import {
 
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import { useCopyStore } from "@/lib/add-copy-store";
 import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { getApiBaseUrl } from "@/lib/api-url";
 
@@ -28,23 +29,13 @@ type Rack = {
 export default function RackPickerScreen() {
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
-  const params = useLocalSearchParams<{
-    returnTo?: string;
-    selectedCopyId?: string;
-    selectedBookId?: string;
-    isbn?: string;
-  }>();
-  const returnTo = typeof params.returnTo === "string" ? params.returnTo : null;
-  const selectedCopyId =
-    typeof params.selectedCopyId === "string" ? params.selectedCopyId : null;
-  const selectedBookId =
-    typeof params.selectedBookId === "string" ? params.selectedBookId : null;
-  const isbn = typeof params.isbn === "string" ? params.isbn : null;
   const [racks, setRacks] = useState<Rack[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const setSelectedRack = useCopyStore((state) => state.setSelectedRack);
+  const setPendingRackId = useCopyStore((state) => state.setPendingRackId);
 
   const filteredRacks = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -113,19 +104,8 @@ export default function RackPickerScreen() {
   }, [loadRacks]);
 
   const handleSelectRack = (rack: Rack) => {
-    if (returnTo) {
-      router.replace({
-        pathname: returnTo as never,
-        params: {
-          selectedRackId: rack.rackId,
-          selectedCopyId: selectedCopyId ?? "",
-          selectedBookId: selectedBookId ?? "",
-          isbn: isbn ?? "",
-        },
-      } as never);
-      return;
-    }
-
+    setSelectedRack(rack);
+    setPendingRackId(null);
     router.back();
   };
 

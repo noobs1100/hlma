@@ -25,6 +25,7 @@ export default function IsbnScannerModal({
   const [cameraActive, setCameraActive] = useState(false);
   const lastScanAtRef = useRef(0);
   const lastHandledCodeRef = useRef<string | null>(null);
+  const alertVisibleRef = useRef(false);
 
   useEffect(() => {
     if (!visible) {
@@ -41,7 +42,27 @@ export default function IsbnScannerModal({
 
   const headline = useMemo(() => "Scan ISBN Barcode", []);
 
+  const showInvalidIsbnAlert = (message: string) => {
+    alertVisibleRef.current = true;
+    setCameraActive(false);
+
+    Alert.alert("Invalid ISBN", message, [
+      {
+        text: "OK",
+        onPress: () => {
+          lastHandledCodeRef.current = null;
+          alertVisibleRef.current = false;
+          setCameraActive(true);
+        },
+      },
+    ]);
+  };
+
   const handleBarcodeScanned = ({ data }: { data: string }) => {
+    if (alertVisibleRef.current || !cameraActive) {
+      return;
+    }
+
     const now = Date.now();
 
     if (now - lastScanAtRef.current < 700) {
@@ -57,7 +78,8 @@ export default function IsbnScannerModal({
     const isbn = normalizeIsbn(data);
 
     if (isbn.length !== 10 && isbn.length !== 13) {
-      Alert.alert("Invalid ISBN", "Scan a valid ISBN-10 or ISBN-13 barcode.");
+      lastHandledCodeRef.current = data;
+      showInvalidIsbnAlert("Scan a valid ISBN-10 or ISBN-13 barcode.");
       return;
     }
 

@@ -50,8 +50,6 @@ export default function TabTwoScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [cameraActive, setCameraActive] = useState(true);
-  const [invalidCodes, setInvalidCodes] = useState<string[]>([]);
-  const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
   const [borrowedCopies, setBorrowedCopies] = useState<BorrowedCopy[]>([]);
   const [borrowedCopiesLoading, setBorrowedCopiesLoading] = useState(true);
   const [borrowedCopiesError, setBorrowedCopiesError] = useState<string | null>(
@@ -59,6 +57,7 @@ export default function TabTwoScreen() {
   );
   const lastScanAtRef = useRef(0);
   const lastHandledCodeRef = useRef<string | null>(null);
+  const alertVisibleRef = useRef(false);
   const scanResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -134,7 +133,7 @@ export default function TabTwoScreen() {
     data: string;
     type?: string;
   }) => {
-    if (scanned) {
+    if (scanned || alertVisibleRef.current || !cameraActive) {
       return;
     }
 
@@ -149,21 +148,23 @@ export default function TabTwoScreen() {
     const parsed = parseAddStuffCode(data);
 
     if (!parsed || parsed.kind !== "b") {
-      const normalizedData = data.trim();
-
-      if (normalizedData) {
-        setInvalidCodes((current) =>
-          current.includes(normalizedData)
-            ? current
-            : [...current, normalizedData],
-        );
-      }
-
-      setLastScannedCode(null);
       setScanned(true);
+
+      alertVisibleRef.current = true;
+      setCameraActive(false);
+
       Alert.alert(
         "Invalid code",
         "Scan a book copy code in the format b:AAAAAA.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              alertVisibleRef.current = false;
+              setCameraActive(true);
+            },
+          },
+        ],
       );
 
       if (scanResetTimeoutRef.current) {
@@ -179,7 +180,6 @@ export default function TabTwoScreen() {
     }
 
     lastHandledCodeRef.current = parsed.code;
-    setLastScannedCode(parsed.raw);
     setScanned(true);
 
     if (scanResetTimeoutRef.current) {
@@ -332,39 +332,6 @@ export default function TabTwoScreen() {
           </Text>
         )}
       </View>
-
-      {lastScannedCode && (
-        <View
-          style={[
-            styles.lastScannedContainer,
-            { backgroundColor: Colors[colorScheme].card },
-          ]}
-        >
-          <Text
-            style={[
-              styles.lastScannedLabel,
-              { color: Colors[colorScheme].muted },
-            ]}
-          >
-            Last Scanned
-          </Text>
-          <Text
-            style={[
-              styles.lastScannedCode,
-              { color: Colors[colorScheme].tint },
-            ]}
-          >
-            {lastScannedCode}
-          </Text>
-        </View>
-      )}
-
-      <View style={styles.statsContainer}>
-        <Text style={[styles.statsText, { color: Colors[colorScheme].text }]}>
-          Last scan: {lastScannedCode ?? "none"} | Invalid:{" "}
-          {invalidCodes.length}
-        </Text>
-      </View>
     </ScrollView>
   );
 }
@@ -397,30 +364,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "bold",
-  },
-  statsContainer: {
-    marginTop: 15,
-    paddingHorizontal: 20,
-  },
-  statsText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  lastScannedContainer: {
-    marginTop: 10,
-    marginHorizontal: 10,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  lastScannedLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  lastScannedCode: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 4,
   },
   borrowedSection: {
     width: "100%",

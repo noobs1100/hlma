@@ -14,6 +14,7 @@ import {
 import { Searchbar } from "react-native-paper";
 import { useFocusEffect } from "@react-navigation/native";
 import { useColorScheme } from "./useColorScheme";
+import { useQuery } from "@tanstack/react-query";
 
 const apiUrl = getApiBaseUrl();
 
@@ -28,92 +29,71 @@ type Book = {
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [books, setBooks] = React.useState<Book[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState("");
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
-  const skipNextDebounceRef = React.useRef(false);
+  const didFocusOnceRef = React.useRef(false);
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
 
-  const loadBooks = React.useCallback(
-    async (query: string, signal?: AbortSignal) => {
-      setLoading(true);
-      setError(null);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
-      try {
-        const trimmedQuery = query.trim();
-        const url = new URL(`${apiUrl}/api/books`);
+  const booksQuery = useQuery({
+    queryKey: ["books", debouncedSearchQuery.trim()],
+    queryFn: async ({ signal }) => {
+      const trimmedQuery = debouncedSearchQuery.trim();
+      const url = new URL(`${apiUrl}/api/books`);
 
-        if (trimmedQuery) {
-          url.searchParams.set("query", trimmedQuery);
-        }
-
-        const response = await fetch(
-          url.toString(),
-          getAuthenticatedRequestInit({ signal }),
-        );
-
-        if (!response.ok) {
-          let message = "Could not load books.";
-
-          try {
-            const payload = (await response.json()) as { message?: string };
-
-            if (payload?.message) {
-              message = payload.message;
-            }
-          } catch {
-            // Fall back to the default error message.
-          }
-
-          throw new Error(message);
-        }
-
-        const payload = (await response.json()) as Book[];
-        setBooks(payload);
-      } catch (fetchError) {
-        if (fetchError instanceof Error && fetchError.name === "AbortError") {
-          return;
-        }
-
-        setError(
-          fetchError instanceof Error
-            ? fetchError.message
-            : "Something went wrong while searching.",
-        );
-        setBooks([]);
-      } finally {
-        if (!signal?.aborted) {
-          setLoading(false);
-        }
+      if (trimmedQuery) {
+        url.searchParams.set("query", trimmedQuery);
       }
+
+      const response = await fetch(
+        url.toString(),
+        getAuthenticatedRequestInit({ signal }),
+      );
+
+      if (!response.ok) {
+        let message = "Could not load books.";
+
+        try {
+          const payload = (await response.json()) as { message?: string };
+
+          if (payload?.message) {
+            message = payload.message;
+          }
+        } catch {
+          // Fall back to the default error message.
+        }
+
+        throw new Error(message);
+      }
+
+      return (await response.json()) as Book[];
     },
-    [],
-  );
+    staleTime: 30_000,
+  });
+
+  const { refetch } = booksQuery;
 
   useFocusEffect(
     React.useCallback(() => {
-      skipNextDebounceRef.current = true;
-      void loadBooks(searchQuery);
-    }, [loadBooks, searchQuery]),
+      if (didFocusOnceRef.current) {
+        void refetch();
+        return;
+      }
+
+      didFocusOnceRef.current = true;
+    }, [refetch]),
   );
 
-  React.useEffect(() => {
-    if (skipNextDebounceRef.current) {
-      skipNextDebounceRef.current = false;
-      return;
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      void loadBooks(searchQuery, controller.signal);
-    }, 300);
-
-    return () => {
-      clearTimeout(timeoutId);
-      controller.abort();
-    };
-  }, [loadBooks, searchQuery]);
+  const books = booksQuery.data ?? [];
+  const loading = booksQuery.isPending || booksQuery.isFetching;
+  const error = booksQuery.error;
+  const errorMessage = error instanceof Error ? error.message : null;
 
   return (
     <View style={styles.container}>
@@ -136,11 +116,13 @@ const Search = () => {
         </View>
       )}
 
-      {!loading && error && (
-        <Text style={[styles.errorText, { color: "#dc2626" }]}>{error}</Text>
+      {!loading && errorMessage && (
+        <Text style={[styles.errorText, { color: "#dc2626" }]}>
+          {errorMessage}
+        </Text>
       )}
 
-      {!loading && !error && books.length === 0 && (
+      {!loading && !errorMessage && books.length === 0 && (
         <Text style={[styles.emptyText, { color: colors.muted }]}>
           No books found.
         </Text>
