@@ -11,14 +11,15 @@ import {
   Text,
   TextInput,
   TouchableWithoutFeedback,
+  View,
 } from "react-native";
 
 import IsbnScannerModal from "@/components/IsbnScannerModal";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
-import { getApiBaseUrl } from "../../lib/api-url";
 import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { lookupBookByIsbn, normalizeIsbn } from "@/lib/isbn-api";
+import { getApiBaseUrl } from "../../lib/api-url";
 
 const apiUrl = getApiBaseUrl();
 
@@ -206,6 +207,12 @@ export default function AddBookScreen() {
             Platform.OS === "ios" ? "interactive" : "on-drag"
           }
         >
+          <View style={styles.headerBlock}>
+            <Text style={[styles.kicker, { color: colors.muted }]}>Add stuff</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Add a book</Text>
+            <Text style={[styles.subtitle, { color: colors.muted }]}>Scan an ISBN or fill in the details manually.</Text>
+          </View>
+
           <Pressable
             onPress={() => setScannerVisible(true)}
             disabled={scanningIsbn || loading}
@@ -233,7 +240,14 @@ export default function AddBookScreen() {
             placeholderTextColor={colors.inputPlaceholder}
             value={form.title}
             onChangeText={(value) => updateField("title", value)}
-            style={styles.input}
+            style={[
+              styles.input,
+              {
+                color: colors.inputText,
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+              },
+            ]}
             cursorColor={colors.tint}
             selectionColor={colors.tint}
           />
@@ -243,7 +257,14 @@ export default function AddBookScreen() {
             placeholderTextColor={colors.inputPlaceholder}
             value={form.author}
             onChangeText={(value) => updateField("author", value)}
-            style={styles.input}
+            style={[
+              styles.input,
+              {
+                color: colors.inputText,
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+              },
+            ]}
             cursorColor={colors.tint}
             selectionColor={colors.tint}
           />
@@ -253,7 +274,14 @@ export default function AddBookScreen() {
             placeholderTextColor={colors.inputPlaceholder}
             value={form.genre}
             onChangeText={(value) => updateField("genre", value)}
-            style={styles.input}
+            style={[
+              styles.input,
+              {
+                color: colors.inputText,
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+              },
+            ]}
             cursorColor={colors.tint}
             selectionColor={colors.tint}
           />
@@ -263,7 +291,14 @@ export default function AddBookScreen() {
             placeholderTextColor={colors.inputPlaceholder}
             value={form.isbn}
             onChangeText={(value) => updateField("isbn", value)}
-            style={styles.input}
+            style={[
+              styles.input,
+              {
+                color: colors.inputText,
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+              },
+            ]}
             autoCapitalize="none"
             cursorColor={colors.tint}
             selectionColor={colors.tint}
@@ -274,7 +309,15 @@ export default function AddBookScreen() {
             placeholderTextColor={colors.inputPlaceholder}
             value={form.description}
             onChangeText={(value) => updateField("description", value)}
-            style={[styles.input, styles.multilineInput]}
+            style={[
+              styles.input,
+              styles.multilineInput,
+              {
+                color: colors.inputText,
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+              },
+            ]}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
@@ -308,14 +351,34 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 24,
     gap: 12,
     flexGrow: 1,
     justifyContent: "flex-start",
-    paddingBottom: 24,
+  },
+  headerBlock: {
+    gap: 4,
+    marginBottom: 2,
+  },
+  kicker: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 1.1,
+  },
+  title: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "800",
+  },
+  subtitle: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   scanButton: {
-    borderRadius: 10,
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
   },
@@ -329,16 +392,17 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
+    lineHeight: 20,
   },
   multilineInput: {
     minHeight: 120,
   },
   button: {
-    borderRadius: 8,
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
   },

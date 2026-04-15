@@ -9,20 +9,19 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableWithoutFeedback,
-  View,
+  View
 } from "react-native";
 
 import CodeScannerModal from "@/components/CodeScannerModal";
 import IsbnScannerModal from "@/components/IsbnScannerModal";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
-import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
-import { getApiBaseUrl } from "@/lib/api-url";
 import { parseAddStuffCode } from "@/lib/addStuffScanner";
-import { useCopyStore } from "../../lib/add-copy-store";
+import { getApiBaseUrl } from "@/lib/api-url";
+import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import type { CopyBook, CopyRack } from "../../lib/add-copy-store";
+import { useCopyStore } from "../../lib/add-copy-store";
 
 const apiUrl = getApiBaseUrl();
 
@@ -402,18 +401,27 @@ export default function AddCopyScreen() {
             Platform.OS === "ios" ? "interactive" : "on-drag"
           }
         >
+          <View style={styles.headerBlock}>
+            <Text style={[styles.kicker, { color: colors.muted }]}>Add stuff</Text>
+            <Text style={[styles.pageTitle, { color: colors.text }]}>Create a copy</Text>
+            <Text style={[styles.pageSubtitle, { color: colors.muted }]}>Scan the copy code, choose the book, then assign a rack.</Text>
+          </View>
+
           <View
             style={[
               styles.card,
               { backgroundColor: colors.card, borderColor: colors.border },
             ]}
           >
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              1. Copy Code
-            </Text>
-            <Text style={[styles.cardSubtitle, { color: colors.muted }]}>
-              Scan the code on the physical copy.
-            </Text>
+            <View style={styles.cardHeaderRow}>
+              <View style={[styles.stepBadge, { borderColor: colors.border, backgroundColor: colors.inputBackground }]}>
+                <Text style={[styles.stepBadgeText, { color: colors.tint }]}>1</Text>
+              </View>
+              <View style={styles.cardHeaderText}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Copy Code</Text>
+                <Text style={[styles.cardSubtitle, { color: colors.muted }]}>Scan the code on the physical copy.</Text>
+              </View>
+            </View>
 
             <View
               style={[
@@ -453,12 +461,15 @@ export default function AddCopyScreen() {
               { backgroundColor: colors.card, borderColor: colors.border },
             ]}
           >
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              2. Associated Book
-            </Text>
-            <Text style={[styles.cardSubtitle, { color: colors.muted }]}>
-              Scan an ISBN or choose a book from the list.
-            </Text>
+            <View style={styles.cardHeaderRow}>
+              <View style={[styles.stepBadge, { borderColor: colors.border, backgroundColor: colors.inputBackground }]}>
+                <Text style={[styles.stepBadgeText, { color: colors.tint }]}>2</Text>
+              </View>
+              <View style={styles.cardHeaderText}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Associated Book</Text>
+                <Text style={[styles.cardSubtitle, { color: colors.muted }]}>Scan an ISBN or choose a book from the list.</Text>
+              </View>
+            </View>
 
             <View
               style={[
@@ -490,7 +501,7 @@ export default function AddCopyScreen() {
               <Pressable
                 onPress={() => setIsbnScannerVisible(true)}
                 style={({ pressed }) => [
-                  styles.secondaryButton,
+                  styles.buttonBase,
                   {
                     borderColor: colors.border,
                     backgroundColor: colors.inputBackground,
@@ -512,7 +523,7 @@ export default function AddCopyScreen() {
                   })
                 }
                 style={({ pressed }) => [
-                  styles.secondaryButton,
+                  styles.buttonBase,
                   {
                     borderColor: colors.border,
                     backgroundColor: colors.inputBackground,
@@ -568,12 +579,15 @@ export default function AddCopyScreen() {
               { backgroundColor: colors.card, borderColor: colors.border },
             ]}
           >
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              3. Rack
-            </Text>
-            <Text style={[styles.cardSubtitle, { color: colors.muted }]}>
-              Scan the rack or choose it from the rack list.
-            </Text>
+            <View style={styles.cardHeaderRow}>
+              <View style={[styles.stepBadge, { borderColor: colors.border, backgroundColor: colors.inputBackground }]}>
+                <Text style={[styles.stepBadgeText, { color: colors.tint }]}>3</Text>
+              </View>
+              <View style={styles.cardHeaderText}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Rack</Text>
+                <Text style={[styles.cardSubtitle, { color: colors.muted }]}>Scan the rack or choose it from the rack list.</Text>
+              </View>
+            </View>
 
             <View
               style={[
@@ -611,7 +625,7 @@ export default function AddCopyScreen() {
               <Pressable
                 onPress={() => setRackScannerVisible(true)}
                 style={({ pressed }) => [
-                  styles.secondaryButton,
+                  styles.buttonBase,
                   {
                     borderColor: colors.border,
                     backgroundColor: colors.inputBackground,
@@ -633,7 +647,7 @@ export default function AddCopyScreen() {
                   })
                 }
                 style={({ pressed }) => [
-                  styles.secondaryButton,
+                  styles.buttonBase,
                   {
                     borderColor: colors.border,
                     backgroundColor: colors.inputBackground,
@@ -684,30 +698,79 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 24,
     gap: 14,
     flexGrow: 1,
     justifyContent: "flex-start",
-    paddingBottom: 24,
+  },
+  headerBlock: {
+    gap: 6,
+    paddingVertical: 4,
+    maxWidth: 440,
+    width: "100%",
+    alignSelf: "center",
+  },
+  kicker: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+  },
+  pageTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "800",
+  },
+  pageSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   card: {
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 18,
+    padding: 16,
+    gap: 14,
+    maxWidth: 440,
+    width: "100%",
+    alignSelf: "center",
+  },
+  cardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 12,
   },
+  cardHeaderText: {
+    flex: 1,
+    gap: 4,
+  },
+  stepBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  stepBadgeText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 17,
+    fontWeight: "800",
   },
   cardSubtitle: {
     fontSize: 13,
+    lineHeight: 18,
   },
   valueBox: {
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    gap: 4,
+    borderRadius: 14,
+    padding: 13,
+    gap: 5,
   },
   valueLabel: {
     fontSize: 12,
@@ -720,32 +783,35 @@ const styles = StyleSheet.create({
   },
   valueMeta: {
     fontSize: 13,
+    lineHeight: 18,
   },
   hintText: {
     fontSize: 13,
+    lineHeight: 18,
   },
   buttonRow: {
     flexDirection: "row",
     gap: 10,
     flexWrap: "wrap",
   },
-  primaryButton: {
-    borderRadius: 10,
+  buttonBase: {
+    borderRadius: 12,
+    borderWidth: 1,
     paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    flexGrow: 1,
+    minWidth: 140,
+  },
+  primaryButton: {
+    borderRadius: 12,
+    paddingVertical: 13,
     paddingHorizontal: 14,
     alignItems: "center",
   },
   primaryButtonText: {
     fontSize: 15,
     fontWeight: "700",
-  },
-  secondaryButton: {
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    alignItems: "center",
-    flexGrow: 1,
   },
   secondaryButtonText: {
     fontSize: 14,
@@ -754,11 +820,15 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 14,
     fontWeight: "600",
+    lineHeight: 20,
   },
   submitButton: {
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 15,
     alignItems: "center",
+    maxWidth: 440,
+    width: "100%",
+    alignSelf: "center",
   },
   submitButtonText: {
     fontSize: 16,
