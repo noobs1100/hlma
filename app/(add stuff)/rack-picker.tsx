@@ -1,20 +1,20 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 
+import LoadingSkeleton from "@/components/LoadingSkeleton";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { useCopyStore } from "@/lib/add-copy-store";
-import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { getApiBaseUrl } from "@/lib/api-url";
+import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 
 const apiUrl = getApiBaseUrl();
 
@@ -174,10 +174,11 @@ export default function RackPickerScreen() {
       </Pressable>
 
       {loading ? (
-        <View style={styles.stateBlock}>
-          <ActivityIndicator color={colors.tint} />
-          <Text style={{ color: colors.muted }}>Loading racks…</Text>
-        </View>
+        <LoadingSkeleton
+          density="compact"
+          count={4}
+          style={styles.loadingList}
+        />
       ) : error ? (
         <View
           style={[
@@ -256,6 +257,9 @@ const styles = StyleSheet.create({
   refreshButtonText: {
     fontSize: 15,
     fontWeight: "700",
+  },
+  loadingList: {
+    marginTop: 4,
   },
   stateBlock: {
     borderRadius: 12,

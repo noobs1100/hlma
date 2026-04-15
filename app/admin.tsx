@@ -1,7 +1,6 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Pressable,
@@ -12,10 +11,11 @@ import {
 } from "react-native";
 
 import CustomButton from "@/components/CustomButton";
+import LoadingSkeleton from "@/components/LoadingSkeleton";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
-import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { getApiBaseUrl } from "@/lib/api-url";
+import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { useAuth } from "@/providers/auth-provider";
 
 const apiUrl = getApiBaseUrl();
@@ -182,10 +182,7 @@ export default function AdminScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.stateBlock}>
-          <ActivityIndicator color={colors.tint} />
-          <Text style={{ color: colors.muted }}>Loading users…</Text>
-        </View>
+        <LoadingSkeleton count={4} density="compact" style={styles.loadingList} />
       ) : error ? (
         <View
           style={[
@@ -350,6 +347,9 @@ const styles = StyleSheet.create({
   listContent: {
     gap: 12,
     paddingBottom: 24,
+  },
+  loadingList: {
+    marginTop: 2,
   },
   stateBlock: {
     minHeight: 180,

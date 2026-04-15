@@ -1,21 +1,21 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
 
 import CustomButton from "@/components/CustomButton";
+import LoadingSkeleton from "@/components/LoadingSkeleton";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
-import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { getApiBaseUrl } from "@/lib/api-url";
+import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { useAuth } from "@/providers/auth-provider";
 
 const apiUrl = getApiBaseUrl();
@@ -196,10 +196,7 @@ export default function RacksScreen() {
       />
 
       {loading ? (
-        <View style={styles.stateBlock}>
-          <ActivityIndicator color={colors.tint} />
-          <Text style={{ color: colors.muted }}>Loading racks…</Text>
-        </View>
+        <LoadingSkeleton count={4} density="compact" style={styles.loadingList} />
       ) : error ? (
         <View
           style={[
@@ -372,6 +369,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: 140,
+  },
+  loadingList: {
+    marginTop: 2,
   },
   errorText: {
     fontSize: 15,

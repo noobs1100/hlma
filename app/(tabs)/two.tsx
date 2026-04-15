@@ -1,14 +1,14 @@
+import LoadingSkeleton from "@/components/LoadingSkeleton";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { parseAddStuffCode } from "@/lib/addStuffScanner";
-import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { getApiBaseUrl } from "@/lib/api-url";
+import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { useFocusEffect } from "@react-navigation/native";
-import { router } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { router } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -248,11 +248,8 @@ export default function TabTwoScreen() {
         </Text>
 
         {borrowedCopiesLoading ? (
-          <View style={styles.stateRow}>
-            <ActivityIndicator color={Colors[colorScheme].tint} />
-            <Text style={{ color: Colors[colorScheme].muted }}>
-              Loading your borrowed copies…
-            </Text>
+          <View style={styles.loadingList}>
+            <LoadingSkeleton count={2} density="compact" />
           </View>
         ) : borrowedCopiesError ? (
           <View style={styles.stateRow}>
@@ -380,6 +377,9 @@ const styles = StyleSheet.create({
   stateRow: {
     gap: 10,
     alignItems: "center",
+  },
+  loadingList: {
+    gap: 10,
   },
   borrowedList: {
     gap: 10,

@@ -1,10 +1,12 @@
+import LoadingSkeleton from "@/components/LoadingSkeleton";
 import Colors from "@/constants/Colors";
 import { getApiBaseUrl } from "@/lib/api-url";
 import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
+import { useFocusEffect } from "@react-navigation/native";
+import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as React from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   StyleSheet,
@@ -12,9 +14,7 @@ import {
   View,
 } from "react-native";
 import { Searchbar } from "react-native-paper";
-import { useFocusEffect } from "@react-navigation/native";
 import { useColorScheme } from "./useColorScheme";
-import { useQuery } from "@tanstack/react-query";
 
 const apiUrl = getApiBaseUrl();
 
@@ -91,7 +91,8 @@ const Search = () => {
   );
 
   const books = booksQuery.data ?? [];
-  const loading = booksQuery.isPending || booksQuery.isFetching;
+  const loading = booksQuery.isPending;
+  const refreshing = booksQuery.isFetching && !booksQuery.isPending;
   const error = booksQuery.error;
   const errorMessage = error instanceof Error ? error.message : null;
 
@@ -107,14 +108,17 @@ const Search = () => {
         keyboardAppearance={colorScheme === "dark" ? "dark" : "light"}
       />
 
-      {loading && (
-        <View style={styles.stateRow}>
-          <ActivityIndicator color={colors.tint} />
-          <Text style={[styles.stateText, { color: colors.muted }]}>
-            Searching books…
-          </Text>
-        </View>
-      )}
+      {loading ? (
+        <LoadingSkeleton
+          density="expanded"
+          count={4}
+          style={styles.loadingList}
+        />
+      ) : null}
+
+      {refreshing ? (
+        <LoadingSkeleton variant="inline" style={styles.loadingStrip} />
+      ) : null}
 
       {!loading && errorMessage && (
         <Text style={[styles.errorText, { color: "#dc2626" }]}>
@@ -128,48 +132,50 @@ const Search = () => {
         </Text>
       )}
 
-      <FlatList
-        data={books}
-        keyExtractor={(item) => item.bookId}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        style={styles.list}
-        contentContainerStyle={styles.results}
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: "/books/[bookId]",
-                params: { bookId: item.bookId },
-              })
-            }
-            style={({ pressed }) => [
-              styles.card,
-              {
-                backgroundColor: colors.inputBackground,
-                borderColor: colors.border,
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}
-          >
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              {item.title}
-            </Text>
-            <Text style={[styles.cardMeta, { color: colors.muted }]}>
-              {item.author} · {item.genre}
-            </Text>
-            <Text style={[styles.cardMeta, { color: colors.muted }]}>
-              ISBN: {item.isbn}
-            </Text>
-            <Text
-              style={[styles.cardDescription, { color: colors.text }]}
-              numberOfLines={3}
+      {!loading ? (
+        <FlatList
+          data={books}
+          keyExtractor={(item) => item.bookId}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          style={styles.list}
+          contentContainerStyle={styles.results}
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: "/books/[bookId]",
+                  params: { bookId: item.bookId },
+                })
+              }
+              style={({ pressed }) => [
+                styles.card,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
             >
-              {item.description}
-            </Text>
-          </Pressable>
-        )}
-      />
+              <Text style={[styles.cardTitle, { color: colors.text }]}>
+                {item.title}
+              </Text>
+              <Text style={[styles.cardMeta, { color: colors.muted }]}>
+                {item.author} · {item.genre}
+              </Text>
+              <Text style={[styles.cardMeta, { color: colors.muted }]}>
+                ISBN: {item.isbn}
+              </Text>
+              <Text
+                style={[styles.cardDescription, { color: colors.text }]}
+                numberOfLines={3}
+              >
+                {item.description}
+              </Text>
+            </Pressable>
+          )}
+        />
+      ) : null}
     </View>
   );
 };
@@ -183,15 +189,13 @@ const styles = StyleSheet.create({
   searchArea: {
     margin: 10,
   },
-  stateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+  loadingList: {
+    paddingHorizontal: 10,
+    paddingTop: 4,
   },
-  stateText: {
-    fontSize: 14,
+  loadingStrip: {
+    marginHorizontal: 16,
+    marginBottom: 8,
   },
   errorText: {
     paddingHorizontal: 16,
