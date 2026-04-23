@@ -1,9 +1,6 @@
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import Colors from "@/constants/Colors";
-import { getApiBaseUrl } from "@/lib/api-url";
-import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { useFocusEffect } from "@react-navigation/native";
-import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as React from "react";
 import {
@@ -15,24 +12,24 @@ import {
 } from "react-native";
 import { Searchbar } from "react-native-paper";
 import { useColorScheme } from "./useColorScheme";
-
-const apiUrl = getApiBaseUrl();
-
-type Book = {
-  bookId: string;
-  title: string;
-  author: string;
-  genre: string;
-  isbn: string;
-  description: string;
-};
+import {
+  getCachedBooks,
+  refreshBooksCache,
+  type OfflineBook,
+} from "@/lib/offline-cache";
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState("");
+  const [books, setBooks] = React.useState<OfflineBook[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const didFocusOnceRef = React.useRef(false);
+  const loadSequenceRef = React.useRef(0);
+
   React.useEffect(() => {
     const timeoutId = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
@@ -41,60 +38,74 @@ const Search = () => {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  const booksQuery = useQuery({
-    queryKey: ["books", debouncedSearchQuery.trim()],
-    queryFn: async ({ signal }) => {
-      const trimmedQuery = debouncedSearchQuery.trim();
-      const url = new URL(`${apiUrl}/api/books`);
+  const loadBooks = React.useCallback(async () => {
+    const loadSequence = ++loadSequenceRef.current;
+    const trimmedQuery = debouncedSearchQuery.trim();
 
-      if (trimmedQuery) {
-        url.searchParams.set("query", trimmedQuery);
+    setError(null);
+    setLoading(true);
+
+    const cachedBooks = await getCachedBooks(trimmedQuery);
+
+    if (loadSequence !== loadSequenceRef.current) {
+      return;
+    }
+
+    const hasCachedBooks = cachedBooks.length > 0;
+    setBooks(cachedBooks);
+
+    if (hasCachedBooks) {
+      setLoading(false);
+      setRefreshing(true);
+    }
+
+    try {
+      await refreshBooksCache();
+
+      if (loadSequence !== loadSequenceRef.current) {
+        return;
       }
 
-      const response = await fetch(
-        url.toString(),
-        getAuthenticatedRequestInit({ signal }),
-      );
+      const refreshedBooks = await getCachedBooks(trimmedQuery);
+      if (loadSequence !== loadSequenceRef.current) {
+        return;
+      }
 
-      if (!response.ok) {
-        let message = "Could not load books.";
-
-        try {
-          const payload = (await response.json()) as { message?: string };
-
-          if (payload?.message) {
-            message = payload.message;
-          }
-        } catch {
-          // Fall back to the default error message.
+      setBooks(refreshedBooks);
+    } catch (loadError) {
+      if (!hasCachedBooks && loadSequence === loadSequenceRef.current) {
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Something went wrong.",
+        );
+        setBooks([]);
+      }
+    } finally {
+      if (loadSequence === loadSequenceRef.current) {
+        if (hasCachedBooks) {
+          setRefreshing(false);
+        } else {
+          setLoading(false);
         }
-
-        throw new Error(message);
       }
+    }
+  }, [debouncedSearchQuery]);
 
-      return (await response.json()) as Book[];
-    },
-    staleTime: 30_000,
-  });
-
-  const { refetch } = booksQuery;
+  React.useEffect(() => {
+    void loadBooks();
+  }, [loadBooks]);
 
   useFocusEffect(
     React.useCallback(() => {
       if (didFocusOnceRef.current) {
-        void refetch();
+        void loadBooks();
         return;
       }
 
       didFocusOnceRef.current = true;
-    }, [refetch]),
+    }, [loadBooks]),
   );
-
-  const books = booksQuery.data ?? [];
-  const loading = booksQuery.isPending;
-  const refreshing = booksQuery.isFetching && !booksQuery.isPending;
-  const error = booksQuery.error;
-  const errorMessage = error instanceof Error ? error.message : null;
 
   return (
     <View style={styles.container}>
@@ -120,13 +131,13 @@ const Search = () => {
         <LoadingSkeleton variant="inline" style={styles.loadingStrip} />
       ) : null}
 
-      {!loading && errorMessage && (
+      {!loading && error && (
         <Text style={[styles.errorText, { color: "#dc2626" }]}>
-          {errorMessage}
+          {error}
         </Text>
       )}
 
-      {!loading && !errorMessage && books.length === 0 && (
+      {!loading && !error && books.length === 0 && (
         <Text style={[styles.emptyText, { color: colors.muted }]}>
           No books found.
         </Text>
@@ -164,7 +175,7 @@ const Search = () => {
                 {item.author} · {item.genre}
               </Text>
               <Text style={[styles.cardMeta, { color: colors.muted }]}>
-                ISBN: {item.isbn}
+                ISBN: {item.isbn ?? "—"}
               </Text>
               <Text
                 style={[styles.cardDescription, { color: colors.text }]}

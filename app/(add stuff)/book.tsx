@@ -4,6 +4,7 @@ import {
   Alert,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -14,6 +15,9 @@ import {
   View,
 } from "react-native";
 
+import CoverAutofillModal, {
+  type CoverAutofillSuggested,
+} from "@/components/CoverAutofillModal";
 import IsbnScannerModal from "@/components/IsbnScannerModal";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
@@ -47,6 +51,10 @@ export default function AddBookScreen() {
   const [loading, setLoading] = useState(false);
   const [scanningIsbn, setScanningIsbn] = useState(false);
   const [scannerVisible, setScannerVisible] = useState(false);
+  const [coverModalVisible, setCoverModalVisible] = useState(false);
+  const [coverSuggested, setCoverSuggested] =
+    useState<CoverAutofillSuggested | null>(null);
+  const [coverReviewVisible, setCoverReviewVisible] = useState(false);
 
   useEffect(() => {
     if (typeof params.isbn === "string" && params.isbn.trim()) {
@@ -62,8 +70,6 @@ export default function AddBookScreen() {
       "title",
       "author",
       "genre",
-      "isbn",
-      "description",
     ];
 
     const missingField = requiredFields.find((field) => !form[field].trim());
@@ -133,8 +139,8 @@ export default function AddBookScreen() {
             title: form.title.trim(),
             author: form.author.trim(),
             genre: form.genre.trim(),
-            isbn: form.isbn.trim(),
-            description: form.description.trim(),
+        isbn: form.isbn.trim() ? form.isbn.trim() : null,
+        description: form.description.trim() ? form.description.trim() : null,
           }),
         }),
       );
@@ -189,16 +195,162 @@ export default function AddBookScreen() {
     }
   };
 
+  const applyCoverSuggestions = () => {
+    if (!coverSuggested) return;
+
+    setForm((current) => ({
+      ...current,
+      ...(coverSuggested.title ? { title: coverSuggested.title } : null),
+      ...(coverSuggested.author ? { author: coverSuggested.author } : null),
+      ...(coverSuggested.genre ? { genre: coverSuggested.genre } : null),
+      ...(coverSuggested.description
+        ? { description: coverSuggested.description }
+        : null),
+    }));
+
+    setCoverReviewVisible(false);
+    setCoverSuggested(null);
+  };
+
+  const closeCoverReview = () => {
+    setCoverReviewVisible(false);
+    setCoverSuggested(null);
+  };
+
   return (
     <KeyboardAvoidingView
       style={[styles.screen, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      <CoverAutofillModal
+        visible={coverModalVisible}
+        onClose={() => setCoverModalVisible(false)}
+        onSuggested={(suggested) => {
+          setCoverSuggested(suggested);
+          setCoverReviewVisible(true);
+        }}
+      />
       <IsbnScannerModal
         visible={scannerVisible}
         onClose={() => setScannerVisible(false)}
         onScan={handleIsbnScanned}
       />
+      <Modal
+        visible={coverReviewVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeCoverReview}
+      >
+        <View
+          style={[
+            styles.reviewBackdrop,
+            { backgroundColor: colors.background },
+          ]}
+        >
+          <View
+            style={[
+              styles.reviewCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.reviewTitle, { color: colors.text }]}>
+              Verify autofill
+            </Text>
+            <Text style={[styles.reviewSubtitle, { color: colors.muted }]}>
+              Review the suggested details. Nothing will be submitted until you
+              press Submit.
+            </Text>
+
+            {coverSuggested &&
+            (coverSuggested.title ||
+              coverSuggested.author ||
+              coverSuggested.genre ||
+              coverSuggested.description) ? (
+              <View style={styles.reviewFields}>
+                {coverSuggested.title ? (
+                  <View style={styles.reviewRow}>
+                    <Text style={[styles.reviewLabel, { color: colors.muted }]}>
+                      Title
+                    </Text>
+                    <Text style={[styles.reviewValue, { color: colors.text }]}>
+                      {coverSuggested.title}
+                    </Text>
+                  </View>
+                ) : null}
+                {coverSuggested.author ? (
+                  <View style={styles.reviewRow}>
+                    <Text style={[styles.reviewLabel, { color: colors.muted }]}>
+                      Author
+                    </Text>
+                    <Text style={[styles.reviewValue, { color: colors.text }]}>
+                      {coverSuggested.author}
+                    </Text>
+                  </View>
+                ) : null}
+                {coverSuggested.genre ? (
+                  <View style={styles.reviewRow}>
+                    <Text style={[styles.reviewLabel, { color: colors.muted }]}>
+                      Genre
+                    </Text>
+                    <Text style={[styles.reviewValue, { color: colors.text }]}>
+                      {coverSuggested.genre}
+                    </Text>
+                  </View>
+                ) : null}
+                {coverSuggested.description ? (
+                  <View style={styles.reviewRow}>
+                    <Text style={[styles.reviewLabel, { color: colors.muted }]}>
+                      Description
+                    </Text>
+                    <Text
+                      style={[styles.reviewValue, { color: colors.text }]}
+                      numberOfLines={6}
+                    >
+                      {coverSuggested.description}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : (
+              <Text style={{ color: colors.muted }}>
+                No details were detected from the cover photo.
+              </Text>
+            )}
+
+            <View style={styles.reviewActions}>
+              <Pressable
+                onPress={applyCoverSuggestions}
+                style={({ pressed }) => [
+                  styles.reviewPrimary,
+                  {
+                    backgroundColor: colors.tint,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+                disabled={!coverSuggested}
+              >
+                <Text
+                  style={[styles.reviewPrimaryText, { color: colors.background }]}
+                >
+                  Apply to form
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={closeCoverReview}
+                style={[
+                  styles.reviewSecondary,
+                  { borderColor: colors.border },
+                ]}
+              >
+                <Text style={[styles.reviewSecondaryText, { color: colors.text }]}>
+                  Discard
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <ScrollView
           contentContainerStyle={styles.content}
@@ -226,6 +378,24 @@ export default function AddBookScreen() {
           >
             <Text style={[styles.scanButtonText, { color: colors.background }]}>
               Scan ISBN Barcode
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setCoverModalVisible(true)}
+            disabled={scanningIsbn || loading}
+            style={({ pressed }) => [
+              styles.scanButton,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                borderWidth: 1,
+                opacity: pressed || scanningIsbn || loading ? 0.85 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.scanButtonText, { color: colors.text }]}>
+              Take Cover Photo (Autofill)
             </Text>
           </Pressable>
 
@@ -408,6 +578,65 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 16,
+    fontWeight: "700",
+  },
+  reviewBackdrop: {
+    flex: 1,
+    padding: 16,
+    justifyContent: "flex-end",
+  },
+  reviewCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 10,
+  },
+  reviewTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  reviewSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  reviewFields: {
+    gap: 10,
+  },
+  reviewRow: {
+    gap: 4,
+  },
+  reviewLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  reviewValue: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "600",
+  },
+  reviewActions: {
+    gap: 10,
+    marginTop: 6,
+  },
+  reviewPrimary: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  reviewPrimaryText: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  reviewSecondary: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  reviewSecondaryText: {
+    fontSize: 15,
     fontWeight: "700",
   },
 });

@@ -1,6 +1,6 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Alert,
     Pressable,
@@ -16,17 +16,14 @@ import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { getApiBaseUrl } from "@/lib/api-url";
 import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
+import {
+  getCachedRacks,
+  refreshRacksCache,
+  type OfflineRack,
+} from "@/lib/offline-cache";
 import { useAuth } from "@/providers/auth-provider";
 
 const apiUrl = getApiBaseUrl();
-
-type Rack = {
-  rackId: string;
-  room: string;
-  cupboard: string;
-  rack: string;
-  description: string | null;
-};
 
 export default function RacksScreen() {
   const { user } = useAuth();
@@ -40,7 +37,7 @@ export default function RacksScreen() {
 
     return null;
   }, [params.selectedRackId]);
-  const [racks, setRacks] = useState<Rack[]>([]);
+  const [racks, setRacks] = useState<OfflineRack[]>([]);
   const [selectedRackId, setSelectedRackId] = useState<string | null>(
     selectedRackIdFromParams,
   );
@@ -48,6 +45,7 @@ export default function RacksScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingRackId, setDeletingRackId] = useState<string | null>(null);
+  const loadSequenceRef = useRef(0);
 
   const selectedRack = useMemo(
     () => racks.find((rack) => rack.rackId === selectedRackId) ?? null,
@@ -55,52 +53,71 @@ export default function RacksScreen() {
   );
 
   const loadRacks = useCallback(async () => {
+    const loadSequence = ++loadSequenceRef.current;
+    let loadedFromCache = false;
+
     setError(null);
-    setRefreshing(true);
+    setLoading(true);
 
     try {
-      const response = await fetch(
-        `${apiUrl}/api/racks`,
-        getAuthenticatedRequestInit({ method: "GET" }),
-      );
+      const cachedRacks = await getCachedRacks();
 
-      if (!response.ok) {
-        let message = "Could not load racks.";
-
-        try {
-          const payload = (await response.json()) as { message?: string };
-          if (payload?.message) {
-            message = payload.message;
-          }
-        } catch {
-          // Keep default error message.
-        }
-
-        throw new Error(message);
+      if (loadSequence !== loadSequenceRef.current) {
+        return;
       }
 
-      const payload = (await response.json()) as Rack[];
-      setRacks(payload);
+      const hasCachedRacks = cachedRacks.length > 0;
+      loadedFromCache = hasCachedRacks;
+      setRacks(cachedRacks);
 
       if (selectedRackIdFromParams) {
         setSelectedRackId(selectedRackIdFromParams);
       } else if (
         !selectedRackId ||
-        !payload.some((rack) => rack.rackId === selectedRackId)
+        !cachedRacks.some((rack) => rack.rackId === selectedRackId)
       ) {
-        setSelectedRackId(payload[0]?.rackId ?? null);
+        setSelectedRackId(cachedRacks[0]?.rackId ?? null);
+      }
+
+      if (hasCachedRacks) {
+        setLoading(false);
+        setRefreshing(true);
+      }
+
+      const refreshedRacks = await refreshRacksCache();
+
+      if (loadSequence !== loadSequenceRef.current) {
+        return;
+      }
+
+      setRacks(refreshedRacks);
+
+      if (selectedRackIdFromParams) {
+        setSelectedRackId(selectedRackIdFromParams);
+      } else if (
+        !selectedRackId ||
+        !refreshedRacks.some((rack) => rack.rackId === selectedRackId)
+      ) {
+        setSelectedRackId(refreshedRacks[0]?.rackId ?? null);
       }
     } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Something went wrong.",
-      );
-      setRacks([]);
-      setSelectedRackId(null);
+      if (!loadedFromCache) {
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Something went wrong.",
+        );
+        setRacks([]);
+        setSelectedRackId(null);
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (loadSequence === loadSequenceRef.current) {
+        if (loadedFromCache) {
+          setRefreshing(false);
+        } else {
+          setLoading(false);
+        }
+      }
     }
   }, [selectedRackId, selectedRackIdFromParams]);
 

@@ -50,6 +50,7 @@ export default function TabTwoScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [cameraActive, setCameraActive] = useState(true);
+  const [cameraSessionKey, setCameraSessionKey] = useState(0);
   const [borrowedCopies, setBorrowedCopies] = useState<BorrowedCopy[]>([]);
   const [borrowedCopiesLoading, setBorrowedCopiesLoading] = useState(true);
   const [borrowedCopiesError, setBorrowedCopiesError] = useState<string | null>(
@@ -109,15 +110,21 @@ export default function TabTwoScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      setCameraSessionKey((value) => value + 1);
       setCameraActive(true);
+      setScanned(false);
+      lastScanAtRef.current = 0;
       lastHandledCodeRef.current = null;
+      alertVisibleRef.current = false;
       if (!permission?.granted) {
         requestPermission();
       }
       void loadBorrowedCopies();
       return () => {
         setCameraActive(false);
+        setScanned(false);
         lastHandledCodeRef.current = null;
+        alertVisibleRef.current = false;
         if (scanResetTimeoutRef.current) {
           clearTimeout(scanResetTimeoutRef.current);
           scanResetTimeoutRef.current = null;
@@ -226,6 +233,7 @@ export default function TabTwoScreen() {
       >
         {cameraActive && (
           <CameraView
+            key={cameraSessionKey}
             style={styles.camera}
             onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
             barcodeScannerSettings={{

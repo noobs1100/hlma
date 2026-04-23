@@ -15,6 +15,10 @@ import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { getApiBaseUrl } from "@/lib/api-url";
+import {
+  getCachedBookDetails,
+  refreshBookDetailsCache,
+} from "@/lib/offline-cache";
 import { useAuth } from "@/providers/auth-provider";
 
 const apiUrl = getApiBaseUrl();
@@ -24,8 +28,10 @@ type Book = {
   title: string;
   author: string;
   genre: string;
-  isbn: string;
-  description: string;
+  isbn: string | null;
+  description: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type Borrower = {
@@ -41,7 +47,7 @@ type Copy = {
   rackId: string;
   status: "borrowed" | "available";
   borrowedByUserId: string | null;
-  borrowedByUser: Borrower | null;
+  borrowedByUser?: Borrower | null;
 };
 
 type BookDetailsResponse = {
@@ -70,37 +76,35 @@ export default function BookDetailsScreen() {
     setLoading(true);
     setError(null);
 
+    let loadedFromCache = false;
+
     try {
-      const response = await fetch(
-        `${apiUrl}/api/books/${bookId}/details`,
-        getAuthenticatedRequestInit({ method: "GET" }),
-      );
+      const cachedDetails = await getCachedBookDetails(bookId);
 
-      if (!response.ok) {
-        let message = "Could not load the book details.";
-
-        try {
-          const payload = (await response.json()) as { message?: string };
-          if (payload?.message) {
-            message = payload.message;
-          }
-        } catch {
-          // Keep the default error message.
-        }
-
-        throw new Error(message);
+      if (cachedDetails) {
+        loadedFromCache = true;
+        setDetails(cachedDetails);
+        setLoading(false);
       }
 
-      setDetails((await response.json()) as BookDetailsResponse);
+      const refreshedDetails = await refreshBookDetailsCache(bookId);
+
+      if (refreshedDetails) {
+        setDetails(refreshedDetails);
+      }
     } catch (loadError) {
-      setDetails(null);
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Something went wrong.",
-      );
+      if (!loadedFromCache) {
+        setDetails(null);
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Something went wrong.",
+        );
+      }
     } finally {
-      setLoading(false);
+      if (!loadedFromCache) {
+        setLoading(false);
+      }
     }
   }, [bookId]);
 
@@ -239,10 +243,10 @@ export default function BookDetailsScreen() {
               {book.author} · {book.genre}
             </Text>
             <Text style={[styles.cardMeta, { color: colors.muted }]}>
-              ISBN: {book.isbn}
+              ISBN: {book.isbn ?? "—"}
             </Text>
             <Text style={[styles.cardDescription, { color: colors.text }]}>
-              {book.description}
+              {book.description ?? "—"}
             </Text>
             {user?.role === "admin" ? (
               <Pressable

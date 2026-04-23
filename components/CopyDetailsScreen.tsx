@@ -1,5 +1,6 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +15,10 @@ import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { getAuthenticatedRequestInit } from "@/lib/authenticated-fetch";
 import { getApiBaseUrl } from "@/lib/api-url";
+import {
+  getCachedCopyDetails,
+  refreshCopyDetailsCache,
+} from "@/lib/offline-cache";
 import { useAuth } from "@/providers/auth-provider";
 
 const apiUrl = getApiBaseUrl();
@@ -31,8 +36,8 @@ type Book = {
   title: string;
   author: string;
   genre: string;
-  isbn: string;
-  description: string;
+  isbn: string | null;
+  description: string | null;
 };
 
 type Rack = {
@@ -49,8 +54,8 @@ type Copy = {
   rackId: string;
   status: "borrowed" | "available";
   borrowedByUserId: string | null;
-  borrowedByUser: Borrower | null;
-  rack: Rack | null;
+  borrowedByUser?: Borrower | null;
+  rack?: Rack | null;
 };
 
 type Borrow = {
@@ -126,43 +131,43 @@ export default function CopyDetailsScreen({
     setLoading(true);
     setError(null);
 
+    let loadedFromCache = false;
+
     try {
-      const response = await fetch(
-        `${apiUrl}/api/copies/${copyId}/details`,
-        getAuthenticatedRequestInit({ method: "GET" }),
-      );
+      const cachedDetails = await getCachedCopyDetails(copyId);
 
-      if (!response.ok) {
-        let message = "Could not load the copy details.";
-
-        try {
-          const payload = (await response.json()) as { message?: string };
-          if (payload?.message) {
-            message = payload.message;
-          }
-        } catch {
-          // Keep the default error message.
-        }
-
-        throw new Error(message);
+      if (cachedDetails) {
+        loadedFromCache = true;
+        setDetails(cachedDetails);
+        setLoading(false);
       }
 
-      setDetails((await response.json()) as CopyDetailsResponse);
+      const refreshedDetails = await refreshCopyDetailsCache(copyId);
+
+      if (refreshedDetails) {
+        setDetails(refreshedDetails);
+      }
     } catch (loadError) {
-      setDetails(null);
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Something went wrong.",
-      );
+      if (!loadedFromCache) {
+        setDetails(null);
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Something went wrong.",
+        );
+      }
     } finally {
-      setLoading(false);
+      if (!loadedFromCache) {
+        setLoading(false);
+      }
     }
   }, [copyId]);
 
-  useEffect(() => {
-    void loadDetails();
-  }, [loadDetails]);
+  useFocusEffect(
+    useCallback(() => {
+      void loadDetails();
+    }, [loadDetails]),
+  );
 
   const handleBorrow = useCallback(async () => {
     if (!copyId || !details?.copy) {
@@ -408,7 +413,7 @@ export default function CopyDetailsScreen({
                 {details.book.author} · {details.book.genre}
               </Text>
               <Text style={[styles.cardMeta, { color: colors.muted }]}>
-                ISBN: {details.book.isbn}
+                ISBN: {details.book.isbn ?? "—"}
               </Text>
             </View>
           ) : null}
@@ -429,7 +434,7 @@ export default function CopyDetailsScreen({
               Rack ID: {details.copy.rackId}
             </Text>
             <Text style={[styles.cardMeta, { color: colors.muted }]}>
-              Location: {formatRackLocation(details.copy.rack)}
+              Location: {formatRackLocation(details.copy.rack ?? null)}
             </Text>
             <Text style={[styles.cardMeta, { color: colors.muted }]}>
               Status: {details.copy.status}
