@@ -52,6 +52,8 @@ export const signUpWithEmail = async (
     );
   }
 
+  await signOut();
+
   return response.data ?? null;
 };
 

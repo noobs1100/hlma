@@ -1,4 +1,4 @@
-import { Link, router } from "expo-router";
+import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput } from "react-native";
 
@@ -70,7 +70,7 @@ export default function SignUpScreen() {
 
     try {
       await signUpWithEmail(name, email, password);
-      router.replace("/(tabs)");
+      router.replace("/sign-in");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -85,13 +85,11 @@ export default function SignUpScreen() {
       loading={loading || isLoading}
       error={error ?? validationError}
       footer={
-        <Link href="/sign-in" asChild>
-          <Pressable>
-            <Text style={[styles.link, { color: colors.tint }]}>
-              Already have an account? Sign in
-            </Text>
-          </Pressable>
-        </Link>
+        <Pressable onPress={() => router.back()}>
+          <Text style={[styles.link, { color: colors.tint }]}> 
+            Already have an account? Sign in
+          </Text>
+        </Pressable>
       }
     >
       <TextInput

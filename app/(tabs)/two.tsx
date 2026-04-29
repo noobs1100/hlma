@@ -217,13 +217,11 @@ export default function TabTwoScreen() {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={[
+    <View
+      style={[
         styles.container,
-        styles.scrollContent,
         { backgroundColor: Colors[colorScheme].background },
       ]}
-      showsVerticalScrollIndicator={false}
     >
       <View
         style={[
@@ -243,101 +241,107 @@ export default function TabTwoScreen() {
         )}
       </View>
 
-      <View
-        style={[
-          styles.borrowedSection,
-          { backgroundColor: Colors[colorScheme].card },
-        ]}
+      <ScrollView
+        style={styles.borrowedScroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <Text
-          style={[styles.sectionTitle, { color: Colors[colorScheme].text }]}
+        <View
+          style={[
+            styles.borrowedSection,
+            { backgroundColor: Colors[colorScheme].card },
+          ]}
         >
-          Currently Borrowed
-        </Text>
+          <Text
+            style={[styles.sectionTitle, { color: Colors[colorScheme].text }]}
+          >
+            Currently Borrowed
+          </Text>
 
-        {borrowedCopiesLoading ? (
-          <View style={styles.loadingList}>
-            <LoadingSkeleton count={2} density="compact" />
-          </View>
-        ) : borrowedCopiesError ? (
-          <View style={styles.stateRow}>
-            <Text style={{ color: Colors[colorScheme].text }}>
-              {borrowedCopiesError}
-            </Text>
-            <Pressable
-              onPress={() => void loadBorrowedCopies()}
-              style={({ pressed }) => [
-                styles.retryButton,
-                {
-                  backgroundColor: Colors[colorScheme].tint,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.retryButtonText,
-                  { color: Colors[colorScheme].background },
-                ]}
-              >
-                Retry
+          {borrowedCopiesLoading ? (
+            <View style={styles.loadingList}>
+              <LoadingSkeleton count={2} density="compact" />
+            </View>
+          ) : borrowedCopiesError ? (
+            <View style={styles.stateRow}>
+              <Text style={{ color: Colors[colorScheme].text }}>
+                {borrowedCopiesError}
               </Text>
-            </Pressable>
-          </View>
-        ) : borrowedCopies.length ? (
-          <View style={styles.borrowedList}>
-            {borrowedCopies.map((borrow) => (
               <Pressable
-                key={borrow.borrowId}
-                onPress={() =>
-                  router.push({
-                    pathname: "/copies/[copyId]",
-                    params: { copyId: borrow.copyId },
-                  })
-                }
+                onPress={() => void loadBorrowedCopies()}
                 style={({ pressed }) => [
-                  styles.borrowedItem,
+                  styles.retryButton,
                   {
-                    borderColor: Colors[colorScheme].border,
-                    backgroundColor: Colors[colorScheme].inputBackground,
-                    opacity: pressed ? 0.88 : 1,
+                    backgroundColor: Colors[colorScheme].tint,
+                    opacity: pressed ? 0.85 : 1,
                   },
                 ]}
               >
                 <Text
                   style={[
-                    styles.borrowedItemTitle,
-                    { color: Colors[colorScheme].text },
+                    styles.retryButtonText,
+                    { color: Colors[colorScheme].background },
                   ]}
                 >
-                  {borrow.book.title}
-                </Text>
-                <Text
-                  style={[
-                    styles.borrowedItemMeta,
-                    { color: Colors[colorScheme].muted },
-                  ]}
-                >
-                  Copy {borrow.copyId} · {borrow.book.author}
-                </Text>
-                <Text
-                  style={[
-                    styles.borrowedItemMeta,
-                    { color: Colors[colorScheme].muted },
-                  ]}
-                >
-                  Due {formatDate(borrow.expectedReturnDate)}
+                  Retry
                 </Text>
               </Pressable>
-            ))}
-          </View>
-        ) : (
-          <Text style={{ color: Colors[colorScheme].muted }}>
-            You do not currently have any borrowed copies.
-          </Text>
-        )}
-      </View>
-    </ScrollView>
+            </View>
+          ) : borrowedCopies.length ? (
+            <View style={styles.borrowedList}>
+              {borrowedCopies.map((borrow) => (
+                <Pressable
+                  key={borrow.borrowId}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/copies/[copyId]",
+                      params: { copyId: borrow.copyId },
+                    })
+                  }
+                  style={({ pressed }) => [
+                    styles.borrowedItem,
+                    {
+                      borderColor: Colors[colorScheme].border,
+                      backgroundColor: Colors[colorScheme].inputBackground,
+                      opacity: pressed ? 0.88 : 1,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.borrowedItemTitle,
+                      { color: Colors[colorScheme].text },
+                    ]}
+                  >
+                    {borrow.book.title}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.borrowedItemMeta,
+                      { color: Colors[colorScheme].muted },
+                    ]}
+                  >
+                    Copy {borrow.copyId} · {borrow.book.author}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.borrowedItemMeta,
+                      { color: Colors[colorScheme].muted },
+                    ]}
+                  >
+                    Due {formatDate(borrow.expectedReturnDate)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <Text style={{ color: Colors[colorScheme].muted }}>
+              You do not currently have any borrowed copies.
+            </Text>
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -353,6 +357,10 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 20,
     gap: 12,
+  },
+  borrowedScroll: {
+    flex: 1,
+    width: "100%",
   },
   cameraContainer: {
     width: 300,
